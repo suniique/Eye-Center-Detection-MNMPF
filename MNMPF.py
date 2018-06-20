@@ -19,14 +19,11 @@ def areaMean(img, x, y, rx, ry):
 
 def projectionX(img, x0, rx, ry):
     '''return the min areaMean value of every horizon lines'''
-    (height, width) = img.shape
-    minMean = areaMean(img, x0, 0, rx, ry)
-    minY = 0
-    for i in range(height):
-        tempMin = areaMean(img, x0, i, rx, ry)
-        if minMean > tempMin:
-            minMean = tempMin
-            minY = i
+    proj = np.vectorize(lambda i: areaMean(img, x0, i, rx, ry))
+    area_mean_of_lines = proj(np.arange(img.shape[0]))
+
+    minY = np.argmin(area_mean_of_lines)
+    minMean = np.min(area_mean_of_lines)
     return (minMean, minY)
 
 # same result? redundent ?
@@ -34,15 +31,12 @@ def projectionX(img, x0, rx, ry):
 
 def projectionY(img, y0, rx, ry):
     '''return the min areaMean value of every vertical lines'''
-    (height, width) = img.shape
-    minMean = areaMean(img, 0, y0, rx, ry)
-    minX = 0
-    for i in range(width):
-        tempMin = areaMean(img, i, y0, rx, ry)
-        if minMean > tempMin:
-            minMean = tempMin
-            minX = i
-    return (minMean, minX)
+    proj = np.vectorize(lambda i: areaMean(img, i, y0, rx, ry))
+    area_mean_of_lines = proj(np.arange(img.shape[1]))
+
+    minY = np.argmin(area_mean_of_lines)
+    minMean = np.min(area_mean_of_lines)
+    return (minMean, minY)
 
 
 def MNMPF(img, rx, ry):

@@ -165,8 +165,8 @@ def image_test():
 
 
 def main():
-    realtime_test()
-    # image_test()
+    # realtime_test()
+    image_test()
 
 
 if __name__ == '__main__':
