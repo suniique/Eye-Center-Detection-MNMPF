@@ -2,6 +2,7 @@ import numpy as np
 from math import sqrt, pow
 import os
 import cv2
+import time
 
 face_cascade = cv2.CascadeClassifier(
     'haarcascades/haarcascade_frontalface_default.xml')
@@ -213,6 +214,8 @@ def image_test():
         frame = cv2.imread(fname)
         frame = cv2.resize(frame, (200, 267))
 
+        start_time = time.time()
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # gray = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
         faces = face_cascade.detectMultiScale(gray)
@@ -228,6 +231,8 @@ def image_test():
                     roi_gray[ey:ey+eh, ex:ex+ew], (3, 3), 0)
                 (centerX, centerY) = MNMPF(roi_eye, 3, 3)
                 roi_eye[centerY][centerX] = 255
+                roi_eye[centerY, :] = 128
+                roi_eye[:, centerX] = 128
                 # cv2.circle(roi_eye,(centerX,centerY),1,(255,0,0),4)
                 #roi_eye=roi_gray[ey:ey+eh, ex:ex+ew]
 
@@ -245,6 +250,7 @@ def image_test():
         # cv2.imshow("roi_color", roi_color)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
+    print("Time used: %.2fs" % (time.time() - start_time))
     print("over")
 
 
