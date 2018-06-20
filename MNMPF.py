@@ -12,8 +12,8 @@ BIG_ANS = 1000000
 def areaMean(img, x, y, rx, ry):
     '''claculate the img's mean grayscale inside a bounding box'''
     (height, width) = img.shape
-    img_bounded = img[max(0, y-ry):max(height, y+ry+1),
-                      max(0, x-rx):max(width, x+rx+1)]
+    img_bounded = img[max(0, y-ry):min(height, y+ry+1),
+                      max(0, x-rx):min(width, x+rx+1)]
     return np.mean(img_bounded)
 
 

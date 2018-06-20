@@ -3,87 +3,11 @@ from math import sqrt, pow
 import os
 import cv2
 import time
+from MNMPF import MNMPF
 
 face_cascade = cv2.CascadeClassifier(
     'haarcascades/haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
-
-
-# img has to be grayscale
-
-# projection algorithm
-
-BIG_ANS = 1000000
-
-'''""""""""""""""""""""""""""""""""""""""""""""""""""""""
-start of algorithm
-""""""""""""""""""""""""""""""""""""""""""""""""""""""'''
-
-
-def areaMean(img, x, y, rx, ry):
-    mny = 0
-    height = len(img)
-    width = len(img[0])
-    for dy in range(-ry, ry+1):
-        for dx in range(-rx, rx+1):
-            if y+dy < 0 or x+dx < 0 or y+dy >= height or x+dx >= width:
-                return BIG_ANS
-            mny = img[y+dy][x+dx]+mny
-    areaSize = (rx*2+1)*(ry*2+1)
-    return mny/areaSize
-
-
-def projectionX(img, x0, rx, ry):
-    height = len(img)
-    minMean = areaMean(img, x0, 0, rx, ry)
-    minY = 0
-    for i in range(height):
-        tempMin = areaMean(img, x0, i, rx, ry)
-        if minMean > tempMin:
-            minMean = tempMin
-            minY = i
-    return (minMean, minY)
-
-# same result? redundent ?
-
-
-def projectionY(img, y0, rx, ry):
-    width = len(img[0])
-    minMean = areaMean(img, 0, y0, rx, ry)
-    minX = 0
-    for i in range(width):
-        tempMin = areaMean(img, i, y0, rx, ry)
-        if minMean > tempMin:
-            minMean = tempMin
-            minX = i
-    return (minMean, minX)
-
-
-def MNMPF(img, rx, ry):
-    width = len(img[0])
-    height = len(img)
-    centerX = 0
-    centerY = 0
-    (minProjectioX, minY) = projectionX(img, 0, rx, ry)
-    (minProjectionY, minX) = projectionY(img, 0, rx, ry)
-    for px in range(width):
-        (tempMinProjectionX, tempMinY) = projectionX(img, px, rx, ry)
-        if minProjectioX > tempMinProjectionX:
-            minProjectioX = tempMinProjectionX
-            centerX = px
-            minY = tempMinY
-    for py in range(height):
-        (tempMinProjectionY, tempMinX) = projectionY(img, py, rx, ry)
-        if minProjectionY > tempMinProjectionY:
-            minProjectionY = tempMinProjectionY
-            centerY = py
-            minX = tempMinX
-    return (centerX, centerY)
-
-
-'''"""""""""""""""""""""""""""""""""""""""""""""""""""""""
-end of algorithm
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""'''
 
 # image gradient algorithm
 
@@ -123,14 +47,11 @@ def c_compute(img, point_y, point_x, grad_x, grad_y):
                 continue
             d = d+((grad_x[n][m]/grad_mag*dx)+(grad_y[n][m]/grad_mag*dy))**2
             # print(((dx*grad_x[n][m])+(dy*grad_y[n][m])))
-    # print point_y
-    # print point_x
-    # print(d)
     d = d/(len(grad_x)*len(grad_x[0]))
     return d
 
 
-def realtime():
+def realtime_test():
     cap = cv2.VideoCapture(0)
     kernal_size = (5, 5)
 
@@ -162,39 +83,28 @@ def realtime():
                           (x + int(5*h/6), int(y + h / 2)), (0, 255, 0), 2)
             eyes = eye_cascade.detectMultiScale(roi_gray)
 
-            # if len(eyes) > 2:
-            #     area = np.array(map(lambda x: x[2] * x[3], eyes))
+            if len(eyes) > 2:
+                area = np.array(map(lambda x: x[2] * x[3], eyes))
+                top1 = eyes[np.argmax(np.argsort(area) == 0)]
+                top2 = eyes[np.argmax(np.argsort(area) == 1)]
+                # for (ex, ey, ew, eh) in [top1, top2]:
+                #     cv2.rectangle(frame, (x+ex, y+ey),
+                #                   (x + ex + ew, y + ey + eh), (0, 0, 255), 2)
 
-            #     top1 = eyes[np.argmax(np.argsort(area) == 0)]
-            #     top2 = eyes[np.argmax(np.argsort(area) == 1)]
+                for (ex, ey, ew, eh) in [top1, top2]:
+                    x1, y1, x2, y2 = x + \
+                        int(w / 6) + ex, int(y + h / 4 + ey), x + \
+                        int(w / 6) + ex + ew, int(y + h / 4 + ey + eh)
 
-            #     for (ex, ey, ew, eh) in [top1, top2]:
-            #         cv2.rectangle(frame, (x+ex, y+ey),
-            #                       (x + ex + ew, y + ey + eh), (0, 0, 255), 2)
-            # else:
-            for (ex, ey, ew, eh) in eyes:
-                #print("{ex} {ey} {ew} {eh}".format(ex=ex,ey=ey,ew=ew,eh=eh))
-                x1, y1, x2, y2 = x + \
-                    int(w / 6) + ex, int(y + h / 4 + ey), x + \
-                    int(w / 6) + ex + ew, int(y + h / 4 + ey + eh)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    eye = gray[y1:y2, x1:x2]
+                    center = MNMPF(eye, 5, 5)
+                    centerX = x1+center[0]
+                    centerY = y1 + center[1]
 
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                eye = gray[y1:y2, x1:x2]
-                center = MNMPF(eye, 5, 5)
-                print(center)
-                centerX = x1+center[0]
-                centerY = y1+center[1]
-                cv2.circle(frame, (centerX, centerY), 3, (0, 255, 0), 2)
-                # (centerX,centerY)=MNMPF(im)
-
-                '''eye=gray[y1:y2,x1:x2]
-                gradx=cv2.Sobel(eye,cv2.CV_16S,1,0,ksize=3)
-                grady=cv2.Sobel(eye,cv2.CV_16S,0,1,ksize=3)
-                #print(np.array(eye).shape)
-                center=eye_center(eye,gradx,grady)
-                eye_y=center[0]+y1
-                eye_x=center[1]+x1
-                cv2.circle(frame,(eye_x,eye_y),2,(0,255,255),3)'''
+                    cv2.circle(frame, (centerX, centerY), 3, (0, 255, 0), 2)
+                    frame[centerY, :] = (128, 0, 0)
+                    frame[:, centerX] = (128, 0, 0)
 
         # show a frame
         cv2.imshow("capture", frame)
@@ -255,8 +165,8 @@ def image_test():
 
 
 def main():
-    # realtime()
-    image_test()
+    realtime_test()
+    # image_test()
 
 
 if __name__ == '__main__':
