@@ -22,7 +22,7 @@ face_cascade = cv2.CascadeClassifier(
     'haarcascades/haarcascade_frontalface_default.xml')
 
 
-def detection(frame, resizeRatio=2, verbos=True):
+def detection(frame, resizeRatio=2, verbos=False):
     start = time.time()
     kernal_size = (5, 5)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -64,7 +64,10 @@ def detection(frame, resizeRatio=2, verbos=True):
         [rightEyeLeftBound, rightEyeTopBound] = rightSet.min(axis=0)
         [rightEyeRightBound, rightEyeBottomBound] = rightSet.max(axis=0)
 
-        gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
+        # gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
+        gray = np.mean(gray[..., [0]], axis=2).astype(np.uint8)
+        gray = cv2.equalizeHist(gray)
+
         boundOffset = 5
         leftEye = gray[leftEyeTopBound - boundOffset:leftEyeBottomBound + boundOffset,
                        leftEyeLeftBound - boundOffset:leftEyeRightBound + boundOffset]
@@ -73,6 +76,8 @@ def detection(frame, resizeRatio=2, verbos=True):
 
         leftEye = cv2.GaussianBlur(leftEye, (3, 3), 0)
         rightEye = cv2.GaussianBlur(rightEye, (3, 3), 0)
+
+        cv2.imshow('Eye', leftEye)
 
         if verbos:
             print("Eyes bounding done at: %.2fs" % (time.time()-start))
@@ -115,7 +120,6 @@ def detection(frame, resizeRatio=2, verbos=True):
 
 
 def drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight):
-    print(centerLeft, centerRight, eyeLeft, eyeRight)
     x = centerRight - centerLeft
     d1 = eyeLeft - centerLeft
     d2 = eyeRight - centerRight
@@ -169,8 +173,8 @@ def image_test():
 
 
 def main():
-    image_test()
-    # realtime_test()
+    # image_test()
+    realtime_test()
 
     # print(predictPath)
 
