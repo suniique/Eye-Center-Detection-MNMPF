@@ -11,18 +11,24 @@ BIG_ANS = 1000000
 '''""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 '''""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-def pupilBorder(img):
-    #(height,width)=img.shape
-    xProjection=np.sum(img,axis=0)
-    yProjection=np.sum(img,axis=1)
-    xThreshold=np.min(xProjection)*1.5
-    yThreshold=np.min(yProjection)*1.5
 
-    leftBound=np.where(xProjection==xProjection[xProjection<xThreshold][0])[0][0]
-    rightBound=np.where(xProjection==xProjection[xProjection<xThreshold][-1])[0][-1]
-    topBound=np.where(yProjection==yProjection[yProjection<yThreshold][0])[0][0]
-    bottomBound=np.where(yProjection==yProjection[yProjection<yThreshold][-1])[0][-1]
-    
+
+def pupilBorder(img):
+    # (height,width)=img.shape
+    xProjection = np.sum(img, axis=0)
+    yProjection = np.sum(img, axis=1)
+    xThreshold = np.min(xProjection)*1.5
+    yThreshold = np.min(yProjection)*1.5
+
+    leftBound = np.where(
+        xProjection == xProjection[xProjection < xThreshold][0])[0][0]
+    rightBound = np.where(
+        xProjection == xProjection[xProjection < xThreshold][-1])[0][-1]
+    topBound = np.where(
+        yProjection == yProjection[yProjection < yThreshold][0])[0][0]
+    bottomBound = np.where(
+        yProjection == yProjection[yProjection < yThreshold][-1])[0][-1]
+
     '''for x in range(width):
         if xProjection[x]<xThreshold:
             leftBound=x
@@ -39,13 +45,11 @@ def pupilBorder(img):
         if yProjection[height-1-y]<yThreshold:
             bottomBound=height-1-y
             break'''
-    return (leftBound,topBound,rightBound,bottomBound)
+    return (leftBound, topBound, rightBound, bottomBound)
 
-        
+
 '''"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""'''
-        
-
 
 
 def areaMean(img, x, y, rx, ry):
@@ -54,6 +58,7 @@ def areaMean(img, x, y, rx, ry):
     img_bounded = img[max(0, y-ry):min(height, y+ry+1),
                       max(0, x-rx):min(width, x+rx+1)]
     return np.mean(img_bounded)
+
 
 def projectionX(img, x0, rx, ry):
     '''return the min areaMean value of every horizon lines'''
@@ -65,6 +70,8 @@ def projectionX(img, x0, rx, ry):
     return (minMean, minY)
 
 # same result? redundent ?
+
+
 def projectionY(img, y0, rx, ry):
     '''return the min areaMean value of every vertical lines'''
     proj = np.vectorize(lambda i: areaMean(img, i, y0, rx, ry))
@@ -73,6 +80,7 @@ def projectionY(img, y0, rx, ry):
     minY = np.argmin(area_mean_of_lines)
     minMean = np.min(area_mean_of_lines)
     return (minMean, minY)
+
 
 def MNMPF(img, rx, ry):
     (height, width) = img.shape

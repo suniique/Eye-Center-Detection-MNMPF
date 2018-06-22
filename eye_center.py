@@ -11,6 +11,7 @@ eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
 
 # image gradient algorithm
 
+
 def eye_center(img, grad_x, grad_y):
     center_x = 0
     center_y = 0
@@ -27,6 +28,8 @@ def eye_center(img, grad_x, grad_y):
     return [center_y, center_x]
 
 # image gradient algorithm
+
+
 def c_compute(img, point_y, point_x, grad_x, grad_y):
     d = 0
     for n in range(len(grad_y)):
@@ -46,6 +49,7 @@ def c_compute(img, point_y, point_x, grad_x, grad_y):
             # print(((dx*grad_x[n][m])+(dy*grad_y[n][m])))
     d = d/(len(grad_x)*len(grad_x[0]))
     return d
+
 
 def realtime_test():
     cap = cv2.VideoCapture(0)
@@ -107,10 +111,12 @@ def realtime_test():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+
 '''
 need to filter the upper area(about 1/4 to 1/3 of the detected eye area) to resolve the problem of
 glasses and other noises
 '''
+
 
 def image_test():
     l = os.listdir('image/')
@@ -140,19 +146,19 @@ def image_test():
                 roi_eye = cv2.GaussianBlur(
                     roi_gray[ey:ey+eh, ex:ex+ew], (3, 3), 0)
 
-                (h,w)=roi_eye.shape
+                (h, w) = roi_eye.shape
                 '''
                 shrink detected area(temporary)
                 need to use dlib or detect some feature of faces or eyes to
                 reduce the size of the detected area
                 '''
-                detected_area=roi_eye[int(h/3):h,:]
+                detected_area = roi_eye[int(h/3):h, :]
                 (centerX, centerY) = MNMPF(detected_area, 3, 3)
-                centerY=centerY+int(h/3)
+                centerY = centerY+int(h/3)
                 roi_eye[centerY][centerX] = 255
                 roi_eye[centerY, :] = 128
                 roi_eye[:, centerX] = 128
-                
+
                 # cv2.circle(roi_eye,(centerX,centerY),1,(255,0,0),4)
                 #roi_eye=roi_gray[ey:ey+eh, ex:ex+ew]
 
@@ -173,12 +179,15 @@ def image_test():
     print("Time used: %.2fs" % (time.time() - start_time))
     print("over")
 
+
 def dlibImageTest():
     pass
+
 
 def main():
     # realtime_test()
     image_test()
+
 
 if __name__ == '__main__':
     main()
