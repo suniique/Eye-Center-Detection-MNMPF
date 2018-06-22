@@ -77,22 +77,22 @@ def detection(frame, resizeRatio=2, verbos=True):
         if verbos:
             print("Eyes bounding done at: %.2fs" % (time.time()-start))
 
-        (leftCenterX, leftCenterY) = MNMPF(leftEye, 3, 3)
-        (rightCenterX, rightCenterY) = MNMPF(rightEye, 3, 3)
+        (leftEyeX, leftEyeY) = MNMPF(leftEye, 3, 3)
+        (rightEyeX, rightEyeY) = MNMPF(rightEye, 3, 3)
 
-        leftCenterX = leftCenterX+leftEyeLeftBound - boundOffset
-        leftCenterY = leftCenterY+leftEyeTopBound - boundOffset
-        rightCenterX = rightCenterX+rightEyeLeftBound - boundOffset
-        rightCenterY = rightCenterY+rightEyeTopBound - boundOffset
+        leftEyeX = leftEyeX+leftEyeLeftBound - boundOffset
+        leftEyeY = leftEyeY+leftEyeTopBound - boundOffset
+        rightEyeX = rightEyeX+rightEyeLeftBound - boundOffset
+        rightEyeY = rightEyeY+rightEyeTopBound - boundOffset
 
-        frame[leftCenterY, leftEyeLeftBound:leftEyeRightBound] = (
+        frame[leftEyeY, leftEyeLeftBound:leftEyeRightBound] = (
             255, 0, 255)
         frame[leftEyeTopBound:leftEyeBottomBound,
-              leftCenterX] = (255, 0, 255)
-        frame[rightCenterY, rightEyeLeftBound:rightEyeRightBound] = (
+              leftEyeX] = (255, 0, 255)
+        frame[rightEyeY, rightEyeLeftBound:rightEyeRightBound] = (
             255, 0, 255)
         frame[rightEyeTopBound:rightEyeBottomBound,
-              rightCenterX] = (255, 0, 255)
+              rightEyeX] = (255, 0, 255)
 
         cv2.rectangle(frame, (leftEyeLeftBound, leftEyeTopBound),
                       (leftEyeRightBound, leftEyeBottomBound), (255, 0, 0), 1)
@@ -103,6 +103,36 @@ def detection(frame, resizeRatio=2, verbos=True):
             print("Eyes center detection done at: %.2fs" %
                   (time.time() - start))
             print("-----------------")
+
+        centerLeft = leftSet.mean(axis=0)
+        centerRight = rightSet.mean(axis=0)
+        eyeLeft = np.array((leftEyeX, leftEyeY))
+        eyeRight = np.array((rightEyeX, rightEyeY))
+        frame = drawAttention(
+            frame, centerLeft, centerRight, eyeLeft, eyeRight)
+
+    return frame
+
+
+def drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight):
+    print(centerLeft, centerRight, eyeLeft, eyeRight)
+    x = centerRight - centerLeft
+    d1 = eyeLeft - centerLeft
+    d2 = eyeRight - centerRight
+
+    cross = d1[0] * d2[1] - d1[1]*d2[0]
+    if abs(cross) < 1e-5:  # parallel lines
+        return frame
+
+    t1 = (x[0] * d2[1] - x[1] * d2[0]) / cross
+    intersection = (centerLeft + d1 * t1).astype(int)
+
+    frame = cv2.line(frame, tuple(eyeLeft), tuple(
+        intersection), (255, 255, 255))
+    frame = cv2.line(frame, tuple(eyeRight), tuple(
+        intersection), (255, 255, 255))
+    frame = cv2.circle(frame, tuple(
+        intersection), 3, (255, 255, 255), -1)
     return frame
 
 
@@ -125,7 +155,7 @@ def image_test():
             continue
 
         fname = "image/" + f
-
+        startTime = time.time()
         frame = cv2.imread(fname)
         frame = cv2.resize(frame, (200, 267))
         frame = detection(frame)
@@ -133,14 +163,14 @@ def image_test():
         cv2.imwrite("image_result_dlib_faces/" + f, frame)
         # cv2.imwrite("image_result/" + "left" + f, leftEye)
         # cv2.imwrite("image_result/" + "right" + f, rightEye)
-        print("Time used: %.2fs" % (time.time() - start_time))
+        print("Time used: %.2fs" % (time.time() - startTime))
 
     print("over")
 
 
 def main():
-    # image_test()
-    realtime_test()
+    image_test()
+    # realtime_test()
 
     # print(predictPath)
 
