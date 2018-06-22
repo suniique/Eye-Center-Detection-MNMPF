@@ -7,6 +7,7 @@ import time
 import cv2
 import dlib
 from MNMPF import MNMPF, pupilBorder
+from vec3d import midPoint
 
 BIG_ANS = 1000000
 
@@ -77,7 +78,7 @@ def detection(frame, resizeRatio=2, verbos=False):
         leftEye = cv2.GaussianBlur(leftEye, (3, 3), 0)
         rightEye = cv2.GaussianBlur(rightEye, (3, 3), 0)
 
-        cv2.imshow('Eye', leftEye)
+        # cv2.imshow('Eye', leftEye)
 
         if verbos:
             print("Eyes bounding done at: %.2fs" % (time.time()-start))
@@ -120,6 +121,20 @@ def detection(frame, resizeRatio=2, verbos=False):
 
 
 def drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight):
+
+    # print(centerLeft, centerRight, eyeLeft, eyeRight)
+    eyeR = 500
+
+    O1 = np.array([centerLeft[0], centerLeft[1], 0])
+    O2 = np.array([centerRight[0], centerRight[1], 0])
+
+    W1 = np.array([eyeLeft[0] - centerLeft[0],
+                   eyeLeft[1] - centerLeft[1], eyeR])
+    W2 = np.array([eyeRight[0] - centerRight[0],
+                   eyeRight[1] - centerRight[1], eyeR])
+
+    P = midPoint(O1, W1, O2, W2).astype(int)
+
     x = centerRight - centerLeft
     d1 = eyeLeft - centerLeft
     d2 = eyeRight - centerRight
@@ -129,7 +144,9 @@ def drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight):
         return frame
 
     t1 = (x[0] * d2[1] - x[1] * d2[0]) / cross
-    intersection = (centerLeft + d1 * t1).astype(int)
+    # intersection = (centerLeft + d1 * t1).astype(int)
+
+    intersection = (P[0, 0], P[1, 0])
 
     frame = cv2.line(frame, tuple(eyeLeft), tuple(
         intersection), (255, 255, 255))
