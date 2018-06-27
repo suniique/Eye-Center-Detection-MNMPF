@@ -18,7 +18,7 @@ face_cascade = cv2.CascadeClassifier(
 
 def image_test():
     start = time.time()
-    frame = cv2.imread('image/test3.jpg')
+    frame = cv2.imread('image/3.jpg')
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     print("Read image time: %.2fs" % (time.time() - start))
 

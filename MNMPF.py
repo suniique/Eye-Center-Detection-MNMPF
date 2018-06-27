@@ -87,17 +87,17 @@ def MNMPF(img, rx, ry):
     centerX = 0
     centerY = 0
     (minProjectioX, minY) = projectionX(img, 0, rx, ry)
-    (minProjectionY, minX) = projectionY(img, 0, rx, ry)
+    #(minProjectionY, minX) = projectionY(img, 0, rx, ry)
     for px in range(width):
         (tempMinProjectionX, tempMinY) = projectionX(img, px, rx, ry)
         if minProjectioX > tempMinProjectionX:
             minProjectioX = tempMinProjectionX
             centerX = px
             minY = tempMinY
-    for py in range(height):
+    '''for py in range(height):
         (tempMinProjectionY, tempMinX) = projectionY(img, py, rx, ry)
         if minProjectionY > tempMinProjectionY:
             minProjectionY = tempMinProjectionY
             centerY = py
-            minX = tempMinX
-    return (centerX, centerY)
+            minX = tempMinX'''
+    return (centerX, minY)

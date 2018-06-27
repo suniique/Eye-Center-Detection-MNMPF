@@ -3,3 +3,4 @@ image_result/
 image_result_dlib_faces/
 predictModel/
 haarcascades/
+video/
