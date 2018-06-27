@@ -9,10 +9,14 @@ import dlib
 from MNMPF import MNMPF, pupilBorder
 from vec3d import midPoint, zMidPoint
 import random
-from numba import jit
+import multiprocessing
 
-BIG_ANS = 1000000
-thick = 3
+thick = 1
+eyeR = 100
+H = 2000
+fontSize=0.5
+cores=multiprocessing.cpu_count()
+pool=multiprocessing.Pool(processes=cores)
 
 predictPath = os.path.dirname(__file__)
 predictPath = os.path.join(predictPath, 'predictModel')
@@ -26,10 +30,8 @@ face_cascade = cv2.CascadeClassifier(
     'haarcascades/haarcascade_frontalface_default.xml')
 
 
-@jit()
-def detection(frame, resizeRatio=2, verbos=False):
+def detection(frame, resizeRatio=1, verbos=False):
     start = time.time()
-    kernal_size = (5, 5)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     height, width, _ = gray.shape
     graySmall = cv2.resize(
@@ -39,13 +41,10 @@ def detection(frame, resizeRatio=2, verbos=False):
         print("Frame reading done at: %.2fs" % (time.time() - start))
 
     dets = detector(graySmall)
-    faces = face_cascade.detectMultiScale(graySmall[..., 0])
-    print(faces)
     if verbos:
-        print(dets)
         print("Face bounding done at: %.2fs" % (time.time() - start))
 
-    for index, faces in enumerate(dets):
+    for faces in dets:
         left = faces.left() * resizeRatio
         right = faces.right() * resizeRatio
         top = faces.top() * resizeRatio
@@ -70,10 +69,14 @@ def detection(frame, resizeRatio=2, verbos=False):
         [leftEyeRightBound, leftEyeBottomBound] = leftSet.max(axis=0)
         [rightEyeLeftBound, rightEyeTopBound] = rightSet.min(axis=0)
         [rightEyeRightBound, rightEyeBottomBound] = rightSet.max(axis=0)
+        #print(leftEyeTopBound-leftEyeBottomBound)
+        #print(rightEyeTopBound-rightEyeBottomBound)
 
         # gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
         gray = np.mean(gray[..., [0]], axis=2).astype(np.uint8)
         gray = cv2.equalizeHist(gray)
+        if verbos:
+            print(gray.shape)
 
         boundOffset = 5
         leftEye = gray[leftEyeTopBound - boundOffset:leftEyeBottomBound + boundOffset,
@@ -101,7 +104,7 @@ def detection(frame, resizeRatio=2, verbos=False):
         (leftEyeX, leftEyeY) = MNMPF(leftEye, 3, 3)
         (rightEyeX, rightEyeY) = MNMPF(rightEye, 3, 3)
 
-        # use pupilBorder
+        #use pupilBorder
         leftEyeX = leftEyeX+leftEyeLeftBound - boundOffset
         leftEyeY = leftEyeY+leftEyeTopBound - boundOffset
         rightEyeX = rightEyeX+rightEyeLeftBound - boundOffset
@@ -124,37 +127,39 @@ def detection(frame, resizeRatio=2, verbos=False):
         if verbos:
             print("Eyes center detection done at: %.2fs" %
                   (time.time() - start))
-            print("-----------------")
-
         centerLeft = leftSet.mean(axis=0)
         centerRight = rightSet.mean(axis=0)
 
-        # centerLeft=[(leftEyeLeftBound+leftEyeRightBound)/2,(leftEyeTopBound+leftEyeBottomBound)/2]
-        # centerRight=[(rightEyeLeftBound+rightEyeRightBound)/2,(rightEyeTopBound+rightEyeBottomBound)/2]
+        #centerLeft=[(leftEyeLeftBound+leftEyeRightBound)/2,(leftEyeTopBound+leftEyeBottomBound)/2]
+        #centerRight=[(rightEyeLeftBound+rightEyeRightBound)/2,(rightEyeTopBound+rightEyeBottomBound)/2]
 
         eyeLeft = np.array((leftEyeX, leftEyeY))
         eyeRight = np.array((rightEyeX, rightEyeY))
 
-        frame, y = drawAttention(
-            frame, centerLeft, centerRight, eyeLeft, eyeRight)
-        return frame, y
-    return frame, 350
+        frame,intersect = drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight)
+        if verbos:
+            print("intersection detection done at: %.2fs" %
+                  (time.time() - start))
+            print("-----------------")
+        return frame,intersect
+    return frame,(350,700)
 
-
-@jit()
 def drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight):
-
-    # print(centerLeft, centerRight, eyeLeft, eyeRight)
-    eyeR = 100
-    H = 3000
-
     O1 = np.array([centerLeft[0], centerLeft[1], 0])
     O2 = np.array([centerRight[0], centerRight[1], 0])
+    
+    dy1=eyeLeft[0] - centerLeft[0]
+    dx1=eyeLeft[1] - centerLeft[1]
+    dz1=sqrt(eyeR**2-dy1**2-dx1**2)
 
-    W1 = np.array([eyeLeft[0] - centerLeft[0],
-                   eyeLeft[1] - centerLeft[1], eyeR])
-    W2 = np.array([eyeRight[0] - centerRight[0],
-                   eyeRight[1] - centerRight[1], eyeR])
+    dy2=eyeRight[0] - centerRight[0]
+    dx2=eyeRight[1] - centerRight[1]
+    dz2=sqrt(eyeR**2-dy2**2-dx2**2)
+
+    W1 = np.array([dy1,
+                   dx1, dz1])
+    W2 = np.array([dy2 ,
+                   dx2, dz2])
 
     P = midPoint(O1, W1, O2, W2).astype(int)
     zPoint = zMidPoint(O1, W1, O2, W2, H).astype(int)
@@ -163,33 +168,19 @@ def drawAttention(frame, centerLeft, centerRight, eyeLeft, eyeRight):
     d1 = eyeLeft - centerLeft
     d2 = eyeRight - centerRight
 
-    ''' print("eye1{}".format(d1))
-    print("eye2{}".format(d2))
-    print((P[0,0]-centerLeft[0],P[1,0]-centerLeft[1]))
-    print((P[0,0]-centerRight[0],P[1,0]-centerRight[1]))'''
-
-    '''angleLeft=np.degrees(np.arctan(d1[1]/d1[0]))
-    angleRignt=np.degrees(np.arctan(d2[1]/d2[0]))
-    if d1[0]<0 and d1[1]>0:
-        angleLeft=angleLeft+180
-    if d1[0]<0 and d1[1]<0:
-        angleLeft=angleLeft'''
-
     cross = d1[0] * d2[1] - d1[1]*d2[0]
     if abs(cross) < 1e-5:  # parallel lines
-        return frame, 350
+        return frame,(350,700)
 
-    t1 = (x[0] * d2[1] - x[1] * d2[0]) / cross
+    #t1 = (x[0] * d2[1] - x[1] * d2[0]) / cross
     # intersection = (centerLeft + d1 * t1).astype(int)
 
     intersection1 = (P[0, 0], P[1, 0])
     intersection2 = (zPoint[0], zPoint[1])
 
-    # frame, y = drawIntersection(frame, intersection1, (255,255,0),eyeLeft, eyeRight)
-    frame, y = drawIntersection(
-        frame, intersection2, (255, 255, 255), eyeLeft, eyeRight)
-    return frame, y
-
+    #frame = drawIntersection(frame, intersection1, (255,255,0),eyeLeft, eyeRight)
+    #frame = drawIntersection(frame, intersection2, (255,0,255),eyeLeft, eyeRight)
+    return frame,intersection2
 
 def drawIntersection(frame, intersection, color, eyeLeft, eyeRight):
     frame = cv2.line(frame, tuple(eyeLeft), tuple(
@@ -199,19 +190,15 @@ def drawIntersection(frame, intersection, color, eyeLeft, eyeRight):
     frame = cv2.circle(frame, tuple(
         intersection), 2*thick, color, -1)
     if intersection[1] in range(len(frame)):
-        frame[intersection[1], :] = (255, 255, 0)
-    frame = cv2.putText(frame, "({},{})".format(intersection[0], intersection[1]), (
-        intersection[0], intersection[1]), cv2.FONT_ITALIC, 1.0, (255, 0, 0), 2)
-    y = intersection[1]
-    return frame, y
-
+        frame[intersection[1],:]=(255,255,0)
+    frame=cv2.putText(frame,"({},{})".format(intersection[0],intersection[1]),(intersection[0],intersection[1]),cv2.FONT_ITALIC,fontSize,(255,0,0),2)
+    return frame 
 
 def realtime_test():
     cap = cv2.VideoCapture(0)
     while(1):
         _, frame = cap.read()
-        frame, y = detection(frame)
-        print(y)
+        frame = detection(frame)
         cv2.imshow("capture", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -229,21 +216,52 @@ def image_test():
         startTime = time.time()
         frame = cv2.imread(fname)
         #frame = cv2.resize(frame, (200, 267))
-        frame, ff = detection(frame)
+        frame = detection(frame)
 
         cv2.imwrite("image_result_dlib_faces/" + f, frame)
         # cv2.imwrite("image_result/" + "left" + f, leftEye)
         # cv2.imwrite("image_result/" + "right" + f, rightEye)
         print("Time used: %.2fs" % (time.time() - startTime))
-
+        
     print("over")
+
+'''def videoFromIphone():
+    videoCapture=cv2.VideoCapture("iphoneVideo/test1.MOV")
+    fps=videoCapture.get((cv2.CAP_PROP_FPS))
+    size=(int(videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)),int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)))
+    videoWriter = cv2.VideoWriter('iphoneVideo/answer1.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), fps, size)
+    success,frame = videoCapture.read()
+    frameSet=[]
+    count=0
+    startTime=time.time()
+    while success:
+        newframe=cv2.transpose(frame)
+        #newframe = detection(newframe)
+        frameSet.append(newframe)
+        if count==20:
+            ansSet=pool.map(detection,frameSet)
+            frameSet=[]
+            count=0
+            for i in range(20):
+                videoWriter.write(ansSet[i])
+        #cv2.imshow("capture",newframe)
+        #videoWriter.write(newframe)  # write one frame into the output video
+        count=count+1
+        success, frame = videoCapture.read()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break  # get the next frame of the video
+    print(time.time()-startTime)
+    cv2.destroyAllWindows()     # close all the widows opened inside the program
+    videoCapture.release        # release the video read/write handler
+    videoWriter.release'''
+
 
 
 def main():
-    # image_test()
-    realtime_test()
-
-    # print(predictPath)
+    #image_test()
+    #realtime_test()
+    #videoFromIphone()
+    pass
 
 
 if __name__ == "__main__":
